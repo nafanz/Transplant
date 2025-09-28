@@ -1,6 +1,9 @@
 import logging
+from typing import Any
 from pathlib import Path
+
 from bcoding import bencode, bdecode
+
 from gazelle.tracker_data import TR, ReleaseType, ArtistType, Encoding
 from core import tp_text
 from core .utils import uni_t_table
@@ -81,7 +84,7 @@ class UploadData:
 
     def upl_dict(self, dest: TR, dest_group=None):
         field_map = FIELD_MAPPING['edition'].copy()
-        upl_data = {'type': 0}
+        upl_data: dict[str, Any] = {'type': 0}
 
         if dest_group:
             upl_data['groupid'] = dest_group

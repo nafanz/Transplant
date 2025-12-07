@@ -585,7 +585,7 @@ def load_profile(profile_name: str):
         set_value_func(obj, new_value)
 
 
-def key_precheck(tracker: TR, key: str) -> str | None:
+def api_key_precheck(tracker: TR, key: str) -> str | None:
     if key != key.strip():
         return gui_text.keycheck_spaces
 
@@ -604,7 +604,7 @@ def key_precheck(tracker: TR, key: str) -> str | None:
 def api_key_test(tracker: TR, key: str):
     msg_box = QMessageBox(wb.settings_window)
     msg_box.setWindowTitle(gui_text.msg_box_title.format(tracker.name))
-    precheck_msg = key_precheck(tracker, key)
+    precheck_msg = api_key_precheck(tracker, key)
     if precheck_msg:
         msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setText(precheck_msg)

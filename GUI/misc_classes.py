@@ -120,6 +120,13 @@ class PatientLineEdit(QLineEdit):
         self.last_text = self.text()
         self.text_changed.emit(self.text())
 
+    def set_text(self, text: str):
+        # for programmatic use (setting config) does not trigger timer
+        self.textChanged.disconnect(self.timer.start)
+        self.setText(text)
+        self.emit_change()
+        self.textChanged.connect(self.timer.start)
+
 
 class ColorExample(QTextBrowser):
     css_changed = pyqtSignal(str)

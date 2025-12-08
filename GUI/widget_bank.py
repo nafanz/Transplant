@@ -10,11 +10,11 @@ from gazelle.tracker_data import TR
 from core.tp_text import tp_version
 from core.img_rehost import IH
 from GUI import gui_text
-from GUI.misc_classes import (TPTextEdit, CyclingTabBar, FolderSelectBox, IniSettings, TempPopUp, TTfilter,
-                              ColorExample, PatientLineEdit, ThemeIcon, StyleSelector, ThemeSelector, ClickableLabel,
-                              PButton)
+from GUI.misc_classes import (TPTextEdit, CyclingTabBar, FolderSelectBox, IniSettings, ProfileSettings, STab, TempPopUp,
+                              TTfilter, ColorExample, PatientLineEdit, ThemeIcon, StyleSelector, ThemeSelector,
+                              ClickableLabel, PButton)
 from GUI.mv_classes import JobModel, JobView, RehostTable
-from GUI.profiles import Profiles, STab
+from GUI.profiles import Profiles, NewProfile
 
 TYPE_MAP = {
     'le': QLineEdit,
@@ -29,7 +29,7 @@ TYPE_MAP = {
 }
 ACTION_MAP = {
     QLineEdit: (lambda x: x.textChanged, lambda x, y: x.setText(y)),
-    PatientLineEdit: (lambda x: x.text_changed, lambda x, y: x.setText(y)),
+    PatientLineEdit: (lambda x: x.text_changed, lambda x, y: x.set_text(y)),
     TPTextEdit: (lambda x: x.plain_text_changed, lambda x, y: x.setText(y)),
     QCheckBox: (lambda x: x.toggled, lambda x, y: x.setChecked(y)),
     QSpinBox: (lambda x: x.valueChanged, lambda x, y: x.setValue(y)),
@@ -98,6 +98,7 @@ class WidgetBank:
         self.main_window = None
         self.settings_window = None
         self.tt_filter = TTfilter()
+        self.profiles: dict[str, ProfileSettings] = {}
         self.main_widgets()
         self.settings_window_widgets()
 
@@ -192,7 +193,8 @@ class WidgetBank:
         self.toolbar = QToolBar()
         self.toolbar.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
         self.toolbar.setMovable(False)
-        self.profiles = Profiles()
+        self.profile_widget = Profiles()
+        self.new_prof_diag = NewProfile(self.profiles, parent=self.profile_widget)
         self.tb_spacer = QWidget()
         self.tb_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 

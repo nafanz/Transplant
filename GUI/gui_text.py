@@ -37,8 +37,6 @@ prof_action_save = 'overwrite'
 prof_action_del = 'delete'
 prof_conf = 'Are you sure you want to {action} profile "{profile}"?'
 prof_placeholder = 'Enter new profile name'
-prof_bad_filename = 'Could not create file:\n{}'
-prof_file_gone = 'Could not find file:\n{}'
 newprof_window = 'New Profile'
 newprof_name_label = 'New profile name:'
 

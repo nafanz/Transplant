@@ -1,5 +1,7 @@
 import os
 import re
+from pathlib import Path
+from enum import IntFlag, auto
 
 from PyQt6.QtWidgets import (QFrame, QTextEdit, QComboBox, QFileDialog, QLineEdit, QTabBar, QVBoxLayout, QLabel,
                              QTextBrowser, QSizePolicy, QApplication, QStyleFactory, QToolButton, QPushButton)
@@ -251,7 +253,7 @@ class IniSettings(QSettings):
     int_regex = re.compile(r'#int\((\d+)\)')
     bool_regex = re.compile(r'#bool\((True|False)\)')
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         super().__init__(path, QSettings.Format.IniFormat)
 
     def setValue(self, key, value):
@@ -274,6 +276,33 @@ class IniSettings(QSettings):
                 value = []
 
         return value
+
+
+class STab(IntFlag):
+    main = auto()
+    rehost = auto()
+    descriptions = auto()
+    looks = auto()
+
+
+class ProfileSettings(IniSettings):
+    def __init__(self, path: Path):
+        super().__init__(path.name)
+        self.name = path.stem
+        self.loaded = False
+        self.tabs = STab(0)
+
+    def matches_config(self, config: IniSettings):
+        return all(self.value(key) == config.value(key) for key in self.allKeys())
+
+    def lowest_tab(self):
+        return self.tabs & -self.tabs
+
+    def comp_tuple(self):
+        return self.loaded, -self.lowest_tab(), len(self.tabs)
+
+    def __lt__(self, other):
+        return self.comp_tuple() < other.comp_tuple()
 
 
 class TPTextEdit(QTextEdit):

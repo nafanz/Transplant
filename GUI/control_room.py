@@ -12,7 +12,7 @@ from core.transplant import Job, Transplanter, JobCreationError
 from gazelle.tracker_data import TR
 from GUI import gui_text
 from GUI.main_gui import MainWindow
-from GUI.misc_classes import IniSettings
+from GUI.misc_classes import ProfileSettings
 from GUI.settings_window import SettingsWindow
 from GUI.widget_bank import wb, CONFIG_NAMES, ACTION_MAP
 
@@ -76,15 +76,18 @@ def start_up():
     config_connections()
     load_config()
     wb.emit_state()
+    initiate_profiles()
     wb.pb_scan.setFocus()
     wb.main_window.show()
 
 
 def main_connections():
     handler.log_forward.connect(print_logs)
-    wb.profiles.load_profile.connect(load_profile)
-    wb.profiles.new_profile.connect(new_profile)
-    wb.profiles.save_profile.connect(save_profile)
+    wb.profile_widget.load_profile.connect(load_profile)
+    wb.profile_widget.new_profile.connect(wb.new_prof_diag.open)
+    wb.new_prof_diag.new_profile.connect(new_profile)
+    wb.profile_widget.save_profile.connect(save_profile)
+    wb.profile_widget.delete_profile.connect(delete_profile)
     wb.te_paste_box.plain_text_changed.connect(lambda x: wb.pb_add.setEnabled(bool(x)))
     wb.bg_source.idClicked.connect(lambda x: wb.config.setValue('bg_source', x))
     wb.pb_add.clicked.connect(parse_paste_input)
@@ -125,6 +128,7 @@ def main_connections():
 
 def config_connections():
     wb.pb_ok.clicked.connect(settings_check)
+    wb.settings_window.closed.connect(settings_accepted)
     wb.settings_window.accepted.connect(settings_accepted)
     wb.tb_key_test1.clicked.connect(lambda: api_key_test(TR.RED, wb.le_key_1.text()))
     wb.tb_key_test2.clicked.connect(lambda: api_key_test(TR.OPS, wb.le_key_2.text()))
@@ -181,10 +185,43 @@ def load_config():
     wb.settings_window.resize(wb.config.value('geometry/config_window_size', defaultValue=QSize(400, 450)))
 
 
+def settings_check():
+    data_dir = wb.fsb_data_dir.currentText()
+    scan_dir = wb.fsb_scan_dir.currentText()
+    dtor_save_dir = wb.fsb_dtor_save_dir.currentText()
+    save_dtors = wb.config.value('main/chb_save_dtors')
+    rehost = wb.config.value('rehost/chb_rehost')
+    add_src_descr = wb.config.value('descriptions/chb_add_src_descr')
+
+    # Path('') exists and is_dir
+    sum_ting_wong = []
+    if not data_dir or not Path(data_dir).is_dir():
+        sum_ting_wong.append(gui_text.sum_ting_wong_1)
+    if scan_dir and not Path(scan_dir).is_dir():
+        sum_ting_wong.append(gui_text.sum_ting_wong_2)
+    if save_dtors and (not dtor_save_dir or not Path(dtor_save_dir).is_dir()):
+        sum_ting_wong.append(gui_text.sum_ting_wong_3)
+    if rehost and not any(h.enabled for h in IH):
+        sum_ting_wong.append(gui_text.sum_ting_wong_4)
+    if add_src_descr and '%src_descr%' not in wb.te_src_descr_templ.toPlainText():
+        sum_ting_wong.append(gui_text.sum_ting_wong_5)
+
+    if sum_ting_wong:
+        warning = QMessageBox(wb.settings_window)
+        warning.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        warning.setIcon(QMessageBox.Icon.Warning)
+        warning.setText("- " + "\n- ".join(sum_ting_wong))
+        warning.exec()
+        return
+    else:
+        wb.settings_window.accept()
+
+
 def settings_accepted():
     wb.config.setValue('geometry/config_window_size', wb.settings_window.size())
     for fsb in wb.fsbs:
         fsb.consolidate()
+    update_profiles()
 
 
 SC_DATA = (
@@ -405,38 +442,6 @@ def scan_dtorrents():
     new_jobs.add_jobs_2_joblist(f'{poptxt}\n{scan_path}')
 
 
-def settings_check():
-    data_dir = wb.fsb_data_dir.currentText()
-    scan_dir = wb.fsb_scan_dir.currentText()
-    dtor_save_dir = wb.fsb_dtor_save_dir.currentText()
-    save_dtors = wb.config.value('main/chb_save_dtors')
-    rehost = wb.config.value('rehost/chb_rehost')
-    add_src_descr = wb.config.value('descriptions/chb_add_src_descr')
-
-    # Path('') exists and is_dir
-    sum_ting_wong = []
-    if not data_dir or not Path(data_dir).is_dir():
-        sum_ting_wong.append(gui_text.sum_ting_wong_1)
-    if scan_dir and not Path(scan_dir).is_dir():
-        sum_ting_wong.append(gui_text.sum_ting_wong_2)
-    if save_dtors and (not dtor_save_dir or not Path(dtor_save_dir).is_dir()):
-        sum_ting_wong.append(gui_text.sum_ting_wong_3)
-    if rehost and not any(h.enabled for h in IH):
-        sum_ting_wong.append(gui_text.sum_ting_wong_4)
-    if add_src_descr and '%src_descr%' not in wb.te_src_descr_templ.toPlainText():
-        sum_ting_wong.append(gui_text.sum_ting_wong_5)
-
-    if sum_ting_wong:
-        warning = QMessageBox(wb.settings_window)
-        warning.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        warning.setIcon(QMessageBox.Icon.Warning)
-        warning.setText("- " + "\n- ".join(sum_ting_wong))
-        warning.exec()
-        return
-    else:
-        wb.settings_window.accept()
-
-
 def set_tooltip(name:  str, ttip: str):
     obj = getattr(wb, name)
     obj.installEventFilter(wb.tt_filter)
@@ -523,38 +528,36 @@ def open_torrent_page(index: QModelIndex):
     QDesktopServices.openUrl(QUrl(url))
 
 
-def new_profile(profile_name: str, tabs: STab):
-    if not hasattr(tabs, '__iter__'):  # Flag members are not iterable in py 3.10-
-        tabs = tuple(t for t in STab if t in tabs)
-    suffix = f"({','.join(t.name[0] for t in tabs)})"
-    profile_name = f'{profile_name.strip()} {suffix}.tpp'
-    try:
-        Path(profile_name).touch(exist_ok=False)
-    except OSError as e:
-        wb.pop_up.pop_up(gui_text.prof_bad_filename.format(e), 4000)
-        return
-    save_profile(profile_name, tabs)
-
-
-def check_file_exists(profile_name: str) -> bool:
-    if not os.path.isfile(profile_name):
-        wb.pop_up.pop_up(gui_text.prof_file_gone.format(profile_name))
-        wb.profiles.refresh()
-        return False
-    return True
-
-
-def save_profile(profile_name: str, tabs: STab = None):
-    profile = IniSettings(profile_name)
-    if not tabs:
-        if not check_file_exists(profile_name):
-            return
-        tabs = STab(0)
+def initiate_profiles():
+    for prof_path in Path.cwd().glob('*.tpp'):
+        profile = ProfileSettings(prof_path)
         for tab_name in profile.childGroups():
-            tabs |= STab[tab_name]
+            profile.tabs |= STab[tab_name]
 
+        wb.profiles[prof_path.stem] = profile
+        profile.loaded = profile.matches_config(wb.config)
+    wb.profile_widget.refresh(wb.profiles)
+
+
+def update_profiles():
+    for name, profile in wb.profiles.items():
+        profile.loaded = profile.matches_config(wb.config)
+    wb.profile_widget.refresh(wb.profiles)
+
+
+def new_profile(profile_name: str, tabs: STab):
+    profile = ProfileSettings(Path(f'{profile_name}.tpp'))
+    profile.tabs = tabs
+    wb.profiles[profile_name] = profile
+    profile.sync()
+    save_profile(profile_name)
+
+
+def save_profile(profile_name: str):
+    profile = wb.profiles[profile_name]
+    profile.clear()
     for tab, sd in CONFIG_NAMES.items():
-        if tab not in tabs:
+        if tab not in profile.tabs:
             continue
 
         wb.config.beginGroup(tab.name)
@@ -567,13 +570,11 @@ def save_profile(profile_name: str, tabs: STab = None):
         profile.endGroup()
 
     profile.sync()
-    wb.profiles.refresh()
+    update_profiles()
 
 
 def load_profile(profile_name: str):
-    if not check_file_exists(profile_name):
-        return
-    profile = IniSettings(profile_name)
+    profile = wb.profiles[profile_name]
     for key in profile.allKeys():
         current_value = wb.config.value(key)
         new_value = profile.value(key)
@@ -583,6 +584,15 @@ def load_profile(profile_name: str):
         obj = getattr(wb, key.partition('/')[2])
         signal_func, set_value_func = ACTION_MAP[type(obj)]
         set_value_func(obj, new_value)
+    update_profiles()
+
+
+def delete_profile(profile_name: str):
+    del wb.profiles[profile_name]
+    file = Path(f'{profile_name}.tpp')
+    if file.is_file():
+        file.unlink()
+    update_profiles()
 
 
 def api_key_precheck(tracker: TR, key: str) -> str | None:

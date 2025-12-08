@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(':/switch.svg'))
         self.setCentralWidget(CentralWidget())
         self.addToolBar(wb.toolbar)
-        wb.toolbar.addWidget(wb.profiles)
+        wb.toolbar.addWidget(wb.profile_widget)
         wb.toolbar.addWidget(wb.tb_spacer)
         wb.toolbar.addWidget(wb.tb_open_config)
         wb.toolbar.setIconSize(QSize(16, 16))

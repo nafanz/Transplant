@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QFormLayout, QDialog
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from GUI import gui_text
 from GUI.widget_bank import wb
 
 
 class SettingsWindow(QDialog):
+    closed = pyqtSignal()
+
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle(gui_text.settings_window_title)
@@ -144,3 +146,7 @@ class SettingsWindow(QDialog):
         total_layout.addWidget(wb.config_tabs)
         total_layout.addSpacing(20)
         total_layout.addLayout(bottom_row)
+
+    def closeEvent(self, e):
+        self.closed.emit()
+        super().closeEvent(e)

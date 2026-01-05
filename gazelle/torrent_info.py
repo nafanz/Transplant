@@ -33,7 +33,7 @@ FIELD_MAP = {
     }
 }
 
-ARTTIST_STRIP_REGEX = re.compile(r'(.+)\s\(\d+\)$')
+ARTIST_STRIP_REGEX = re.compile(r'(.+)\s\(\d+\)$')
 
 
 def unexape(thing: Any) -> Any:
@@ -158,7 +158,7 @@ class TorrentInfo:
     def strip_artists(self):
         for a_type, artists in self.artist_data.items():
             for a in artists:
-                if match := ARTTIST_STRIP_REGEX.match(a['name']):
+                if match := ARTIST_STRIP_REGEX.match(a['name']):
                     stripped = match.group(1)
                     a['name'] = stripped
 

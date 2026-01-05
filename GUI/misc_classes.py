@@ -191,6 +191,8 @@ class ThemeModel(QAbstractListModel):
         if role == Qt.ItemDataRole.UserRole:
             return self.themes(index.row())
 
+        return None
+
 
 class HistoryBox(QComboBox):
     list_changed = pyqtSignal(list)

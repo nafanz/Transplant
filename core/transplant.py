@@ -34,8 +34,15 @@ class JobCreationError(Exception):
 
 
 class Job:
-    def __init__(self, src_tr=None, tor_id=None, src_dom=None, dtor_path=None, scanned=False, dest_group=None,
-                 new_dtor=False, dest_trs=None):
+    def __init__(self, src_tr: TR | None = None,
+                 tor_id: str | None = None,
+                 src_dom: str | None = None,
+                 dtor_path: Path | None = None,
+                 scanned: bool = False,
+                 dest_group: int | None = None,
+                 new_dtor: bool = False,
+                 dest_trs=None
+                 ):
 
         self.src_tr = src_tr
         self.tor_id = tor_id
@@ -43,7 +50,6 @@ class Job:
         self.dtor_path: Path = dtor_path
         self.dest_group = dest_group
         self.new_dtor = new_dtor
-        self.dest_trs = dest_trs
 
         self.info_hash = None
         self.display_name = None
@@ -65,8 +71,7 @@ class Job:
         if (self.tor_id is None) is (self.info_hash is None):
             raise JobCreationError(tp_text.id_xor_hash)
 
-        if not self.dest_trs:
-            self.dest_trs = ~self.src_tr
+        self.dest_trs = dest_trs or ~self.src_tr
 
     def parse_dtorrent(self, path: Path):
         torbytes = path.read_bytes()

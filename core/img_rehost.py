@@ -1,6 +1,15 @@
+from __future__ import annotations
+
 import requests
+
 from base64 import b64encode
-from enum import Enum, member
+from enum import Enum
+
+try:
+    from enum import member
+except ImportError:
+    def member(value):
+        return (value,)
 
 
 def ra_rehost(img_link, key):

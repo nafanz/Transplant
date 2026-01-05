@@ -4,6 +4,19 @@ from pathlib import Path
 from typing import Iterator
 
 
+class Flag310Mixin:
+    def member_gen(self):
+        for m in self._member_map_.values():
+            if m in self:
+                yield m
+
+    def __len__(self):
+        return len(tuple(self.member_gen()))
+
+    def __iter__(self):
+        yield from self.member_gen()
+
+
 def scantree(path: Path) -> Iterator[Path]:
     for p in path.iterdir():
         if p.is_dir() and not p.name.startswith('.'):

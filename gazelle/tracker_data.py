@@ -1,7 +1,14 @@
+import sys
 from enum import Enum, Flag, EnumMeta
 
+if sys.version_info < (3, 11):
+    from core.utils import Flag310Mixin
+    flag_inheritance = (Flag310Mixin, Flag)
+else:
+    flag_inheritance = (Flag,)
 
-class TR(Flag):
+
+class TR(*flag_inheritance):
     RED = {
         'site': 'https://redacted.sh/',
         'tracker': 'https://flacsfor.me/{passkey}/announce',
@@ -100,7 +107,7 @@ class EncMeta(EnumMeta):
         return cls.alt_names_map.get(item) or cls._member_map_['Other']
 
 
-class Encoding(Flag, metaclass=EncMeta):
+class Encoding(*flag_inheritance, metaclass=EncMeta):
     Lossless = 'Lossless'
     Lossless_24 = '24bit Lossless'
     C320 = '320'

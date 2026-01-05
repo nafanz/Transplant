@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 from enum import IntFlag, auto
 
@@ -280,7 +281,14 @@ class IniSettings(QSettings):
         return value
 
 
-class STab(IntFlag):
+if sys.version_info < (3, 11):
+    from core.utils import Flag310Mixin
+    flag_inheritance = (Flag310Mixin, IntFlag)
+else:
+    flag_inheritance = (IntFlag,)
+
+
+class STab(*flag_inheritance):
     main = auto()
     rehost = auto()
     descriptions = auto()

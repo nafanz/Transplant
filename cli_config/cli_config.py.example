@@ -27,7 +27,7 @@ del_dtors = False
 file_check = True
 
 # Check if the upload was merged into an existing group or if the log scores are different.
-post_upload_checks = False
+post_upload_checks = True
 
 # level of feedback.
 # 0: silent, 1: only errors, 2: normal, 3: debugging

@@ -51,7 +51,7 @@ CONFIG_NAMES = {
         'chb_save_dtors': (False, True),
         'chb_del_dtors': (False, True),
         'chb_file_check': (True, True),
-        'chb_post_compare': (False, True),
+        'chb_post_compare': (True, True),
         'chb_show_tips': (True, True),
         'spb_verbosity': (2, True),
     },

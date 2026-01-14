@@ -171,7 +171,7 @@ class Transplanter:
 
             report.info(f"{tp_text.uploading} {dest_tr.name}")
             try:
-                torrent_id = dest_api.upload(data_dict, files_list)
+                group_id, torrent_id, new_group = dest_api.upload(data_dict, files_list)
             except Exception:
                 saul_goodman = False
                 report.exception(f"{tp_text.upl_fail}")
@@ -180,8 +180,7 @@ class Transplanter:
                 new_tor_url = dest_tr.site + f"torrents.php?torrentid={torrent_id}"
                 report.log(25, f"{tp_text.upl_success} {new_tor_url}")
 
-            if self.post_compare:
-                self.compare_upl_info(src_api, dest_api, torrent_id)
+            self.post_upload_warnings(dest_api, group_id, torrent_id, new_group)
 
             if self.save_dtors:
                 self.save_dtorrent(upl_files, new_tor_url)
@@ -287,7 +286,18 @@ class Transplanter:
             else:
                 self.subdir_store[p.name] = p
 
-    def compare_upl_info(self, src_api: BaseApi, dest_api: BaseApi, new_id: int):
+    def post_upload_warnings(self, dest_api: BaseApi,
+                             new_group_id: int, new_id: int, new_group: bool | None):
+        if self.job.dest_group:
+            if self.job.dest_group != new_group_id:
+                report.warning(tp_text.wrong_group)
+        else:
+            if not new_group:
+                report.warning(tp_text.merged)
+
+        if not self.post_compare:
+            return
+
         new_tor_info = dest_api.torrent_info(id=new_id)
 
         if self.tor_info.haslog:
@@ -296,20 +306,10 @@ class Transplanter:
             if not score_1 == score_2:
                 report.warning(tp_text.log_score_dif.format(score_1, score_2))
 
-        src_descr = self.tor_info.alb_descr.replace(src_api.url, '')
-        dest_descr = new_tor_info.alb_descr.replace(dest_api.url, '')
-
-        if src_descr != dest_descr or self.tor_info.title != new_tor_info.title:
-            report.warning(tp_text.merged)
         if 'delete.this.tag' in new_tor_info.tags:
             report.warning(tp_text.delete_this_tag)
 
-        red_info = None
-        for i in (self.tor_info, new_tor_info):
-            if i.src_tr is TR.RED:
-                red_info = i
-                break
-        assert red_info
+        red_info = self.tor_info if self.job.src_tr is TR.RED else new_tor_info
 
         mismatch = []
         for a_type in ArtistType:

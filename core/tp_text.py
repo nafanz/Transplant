@@ -25,7 +25,8 @@ rehost_failed = "Failed. Using source url"
 permission_error = 'Permission error. Folder skipped: '
 # post check
 log_score_dif = 'Log scores different: {} - {}'
-merged = 'Probably merged into an existing group'
+merged = 'Merged into an existing group'
+wrong_group = 'Not uploaded to specified group'
 delete_this_tag = "Group has a 'delete.this.tag'"
 artist_mism = 'Artist count mismatch in'
 

@@ -198,7 +198,7 @@ class RedApi(KeyApi):
         return torrent_id
 
     def upl_response_handler(self, r: dict):
-        return r.get('torrentid')
+        return r['groupid'], r['torrentid'], r['newgroup']
 
 
 class OpsApi(KeyApi):
@@ -206,7 +206,7 @@ class OpsApi(KeyApi):
         super().__init__(TR.OPS, key=f"token {key}")
 
     def upl_response_handler(self, r):
-        return r.get('torrentId')
+        return r['groupId'], r['torrentId'], r['newgroup']
 
 
 def sleeve(trckr: TR, **kwargs) -> RedApi | OpsApi:

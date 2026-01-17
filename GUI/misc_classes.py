@@ -196,32 +196,32 @@ class ThemeModel(QAbstractListModel):
 
 
 class HistoryBox(QComboBox):
-    list_changed = pyqtSignal(list)
-
-    def set_list(self, item_list: list[str]):
-        if item_list:
-            self.clear()
-            self.addItems(item_list)
-            self.list_changed.emit(item_list)
+    current_text_changed = pyqtSignal(str)
 
     @property
-    def list(self):
+    def item_string_list(self):
         return [self.itemText(i) for i in range(self.count())]
 
-    def add(self, txt):
-        if (index := self.findText(txt)) > 0:
+    def set_text(self, txt):
+        index = self.findText(txt)
+        if index < 0:
+            self.insert(txt)
+        else:
             self.setCurrentIndex(index)
-        elif index < 0:
-            self.insertItem(0, txt)
-            self.setCurrentIndex(0)
-            self.list_changed.emit(self.list)
 
     def consolidate(self):
-        self.add(self.currentText())
-        if self.currentIndex() > 0:
+        index = self.findText(self.currentText())
+        if index < 0:
+            self.insert(self.currentText())
+        if index > 0:
             txt = self.currentText()
             self.removeItem(self.currentIndex())
-            self.add(txt)
+            self.insert(txt)
+
+    def insert(self, txt):
+        self.insertItem(0, txt)
+        self.setCurrentIndex(0)
+        self.current_text_changed.emit(txt)
 
 
 class FolderSelectBox(HistoryBox):
@@ -243,7 +243,7 @@ class FolderSelectBox(HistoryBox):
         if not selected:
             return
         selected = os.path.normpath(selected)
-        self.add(selected)
+        self.set_text(selected)
 
     def setToolTip(self, txt):
         self.folder_action.setToolTip(txt)
@@ -268,8 +268,8 @@ class IniSettings(QSettings):
             value = '#empty list'
         super().setValue(key, value)
 
-    def value(self, key, **kwargs):
-        value = super().value(key, **kwargs)
+    def value(self, key, *args, **kwargs):
+        value = super().value(key, *args, **kwargs)
         if isinstance(value, str):
             if int_match := self.int_regex.match(value):
                 value = int(int_match.group(1))
@@ -302,7 +302,7 @@ class ProfileSettings(IniSettings):
         self.loaded = False
         self.tabs = STab(0)
 
-    def matches_config(self, config: IniSettings):
+    def matches_config(self, config: IniSettings) -> bool:
         return all(self.value(key) == config.value(key) for key in self.allKeys())
 
     def lowest_tab(self):

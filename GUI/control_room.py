@@ -14,7 +14,7 @@ from core.transplant import Job, Transplanter, JobCreationError
 from gazelle.tracker_data import TR
 from GUI import gui_text
 from GUI.main_gui import MainWindow
-from GUI.misc_classes import ProfileSettings
+from GUI.misc_classes import ProfileSettings, FolderSelectBox
 from GUI.settings_window import SettingsWindow
 from GUI.widget_bank import wb, CONFIG_NAMES, ACTION_MAP
 
@@ -78,7 +78,6 @@ def start_up():
     config_connections()
     load_config()
     wb.emit_state()
-    initiate_profiles()
     wb.pb_scan.setFocus()
     wb.main_window.show()
 
@@ -136,10 +135,8 @@ def config_connections():
     wb.tb_key_test2.clicked.connect(lambda: api_key_test(TR.OPS, wb.le_key_2.text()))
     wb.le_key_1.textChanged.connect(lambda t: wb.tb_key_test1.setEnabled(bool(t)))
     wb.le_key_2.textChanged.connect(lambda t: wb.tb_key_test2.setEnabled(bool(t)))
-    wb.fsb_scan_dir.list_changed.connect(
-        lambda: wb.pb_scan.setEnabled(bool(wb.fsb_scan_dir.currentText())))
-    wb.fsb_dtor_save_dir.list_changed.connect(
-        lambda: wb.pb_open_tsavedir.setEnabled(bool(wb.fsb_dtor_save_dir.currentText())))
+    wb.fsb_scan_dir.current_text_changed.connect(lambda t: wb.pb_scan.setEnabled(bool(t)))
+    wb.fsb_dtor_save_dir.current_text_changed.connect(lambda t: wb.pb_open_tsavedir.setEnabled(bool(t)))
     wb.chb_deep_search.toggled.connect(wb.spb_deep_search_level.setEnabled)
     wb.chb_show_tips.toggled.connect(wb.tt_filter.set_tt_enabled)
     wb.spb_verbosity.valueChanged.connect(set_verbosity)
@@ -221,7 +218,7 @@ def settings_check():
 
 def settings_accepted():
     wb.config.setValue('geometry/config_window_size', wb.settings_window.size())
-    for fsb in wb.fsbs:
+    for fsb in wb.fsbs.values():
         fsb.consolidate()
     update_profiles()
 
@@ -530,17 +527,6 @@ def open_torrent_page(index: QModelIndex):
     QDesktopServices.openUrl(QUrl(url))
 
 
-def initiate_profiles():
-    for prof_path in Path.cwd().glob('*.tpp'):
-        profile = ProfileSettings(prof_path)
-        for tab_name in profile.childGroups():
-            profile.tabs |= STab[tab_name]
-
-        wb.profiles[prof_path.stem] = profile
-        profile.loaded = profile.matches_config(wb.config)
-    wb.profile_widget.refresh(wb.profiles)
-
-
 def update_profiles():
     for name, profile in wb.profiles.items():
         profile.loaded = profile.matches_config(wb.config)
@@ -584,8 +570,10 @@ def load_profile(profile_name: str):
             continue
 
         obj = getattr(wb, key.partition('/')[2])
-        signal_func, set_value_func = ACTION_MAP[type(obj)]
+        _, set_value_func = ACTION_MAP[type(obj)]
         set_value_func(obj, new_value)
+        if isinstance(obj, FolderSelectBox):
+            obj.consolidate()
     update_profiles()
 
 
@@ -649,4 +637,6 @@ def save_state():
     wb.config.setValue('geometry/position', wb.main_window.pos())
     wb.config.setValue('geometry/splitter_pos', wb.splitter.sizes())
     wb.config.setValue('geometry/job_view_header', wb.job_view.horizontalHeader().saveState())
+    for name, fsb in wb.fsbs.items():
+        wb.config.setValue(f'fsb_lists/{name}', fsb.item_string_list)
     wb.config.sync()

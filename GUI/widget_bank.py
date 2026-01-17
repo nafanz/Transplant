@@ -1,3 +1,4 @@
+from pathlib import Path
 from functools import partial
 
 from PyQt6.QtWidgets import (QApplication, QWidget, QTextEdit, QPushButton, QToolButton, QRadioButton, QButtonGroup,
@@ -33,7 +34,7 @@ ACTION_MAP = {
     TPTextEdit: (lambda x: x.plain_text_changed, lambda x, y: x.setText(y)),
     QCheckBox: (lambda x: x.toggled, lambda x, y: x.setChecked(y)),
     QSpinBox: (lambda x: x.valueChanged, lambda x, y: x.setValue(y)),
-    FolderSelectBox: (lambda x: x.list_changed, lambda x, y: x.set_list(y)),
+    FolderSelectBox: (lambda x: x.current_text_changed, lambda x, y: x.set_text(y)),
     StyleSelector: (lambda x: x.currentTextChanged, lambda x, y: x.setCurrentText(y)),
     ThemeSelector: (lambda x: x.currentTextChanged, lambda x, y: x.setCurrentText(y)),
     RehostTable: (lambda x: x.rh_data_changed, lambda x, y: x.set_rh_data(y))
@@ -43,11 +44,11 @@ CONFIG_NAMES = {
     STab.main: {
         'le_key_1': (None, True),
         'le_key_2': (None, True),
-        'fsb_data_dir': ([], True),
+        'fsb_data_dir': (None, True),
         'chb_deep_search': (False, False),
         'spb_deep_search_level': (2, False),
-        'fsb_scan_dir': ([], True),
-        'fsb_dtor_save_dir': ([], False),
+        'fsb_scan_dir': (None, True),
+        'fsb_dtor_save_dir': (None, False),
         'chb_save_dtors': (False, True),
         'chb_del_dtors': (False, True),
         'chb_file_check': (True, True),
@@ -91,14 +92,15 @@ class WidgetBank:
         super().__init__()
         self.app = QApplication.instance()
         self.config = IniSettings("Transplant.ini")
+        self.profiles: dict[str, ProfileSettings] = {}
+        self.initiate_profiles()
         self.config_update()
-        self.fsbs = []
+        self.fsbs: dict[str, FolderSelectBox] = {}
         self.theme_writable = hasattr(self.app.styleHints(), 'setColorScheme')
         self.user_input_elements()
         self.main_window = None
         self.settings_window = None
         self.tt_filter = TTfilter()
-        self.profiles: dict[str, ProfileSettings] = {}
         self.main_widgets()
         self.settings_window_widgets()
 
@@ -111,6 +113,15 @@ class WidgetBank:
             self._pop_up = TempPopUp(self.main_window)
 
         return self._pop_up
+
+    def initiate_profiles(self):
+        for prof_path in Path.cwd().glob('*.tpp'):
+            profile = ProfileSettings(prof_path)
+            for tab_name in profile.childGroups():
+                profile.tabs |= STab[tab_name]
+            profile.loaded = profile.matches_config(self.config)
+
+            self.profiles[prof_path.stem] = profile
 
     def config_update(self):
         config_version = self.config.value('config_version')
@@ -182,6 +193,20 @@ class WidgetBank:
         if config_version < (2, 5, 2) <= tp_version:
             self.config.remove('geometry/job_view_header')
 
+        if config_version < (2, 6, 2) <= tp_version:
+            fsb_keys = ('fsb_data_dir', 'fsb_scan_dir', 'fsb_dtor_save_dir')
+            for fsb_key in fsb_keys:
+                f_list = self.config.value(f'main/{fsb_key}')
+                self.config.setValue(f'fsb_lists/{fsb_key}', f_list)
+                self.config.setValue(f'main/{fsb_key}', f_list[0])
+
+            for prof in self.profiles.values():
+                if 'main' not in prof.childGroups():
+                    continue
+                for fsb_key in fsb_keys:
+                    f_list = prof.value(f'main/{fsb_key}')
+                    prof.setValue(f'main/{fsb_key}', f_list[0])
+
         self.config.setValue('config_version', tp_version)
 
     def main_widgets(self):
@@ -194,6 +219,7 @@ class WidgetBank:
         self.toolbar.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
         self.toolbar.setMovable(False)
         self.profile_widget = Profiles()
+        self.profile_widget.refresh(self.profiles)
         self.new_prof_diag = NewProfile(self.profiles, parent=self.profile_widget)
         self.tb_spacer = QWidget()
         self.tb_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -314,12 +340,19 @@ class WidgetBank:
                 obj = obj_type()
                 setattr(self, el_name, obj)
 
-                # set values from config
-                if not self.config.contains(el_name):
-                    self.config.setValue(el_name, df)
+                if obj_type == FolderSelectBox:
+                    self.config.endGroup()
+                    obj.addItems(self.config.value(f'fsb_lists/{el_name}') or [])
+                    self.fsbs[el_name] = obj
+                    obj.dialog_caption = gui_text.tooltips[el_name]
+                    self.config.beginGroup(tab.name)
+                else:
+                    # set values from config
+                    if not self.config.contains(el_name):
+                        self.config.setValue(el_name, df)
 
-                change_sig, set_value_func = ACTION_MAP[obj_type]
-                set_value_func(obj, self.config.value(el_name))
+                    _, set_value_func = ACTION_MAP[obj_type]
+                    set_value_func(obj, self.config.value(el_name))
 
                 # make Label
                 if mk_lbl:
@@ -331,10 +364,6 @@ class WidgetBank:
                         lbl = QLabel()
                     lbl.setText(getattr(gui_text, label_name))
                     setattr(self, label_name, lbl)
-
-                if obj_type == FolderSelectBox:
-                    obj.dialog_caption = gui_text.tooltips[el_name]
-                    self.fsbs.append(obj)
 
             self.config.endGroup()
 
@@ -363,6 +392,7 @@ class WidgetBank:
                 signal_func, _ = ACTION_MAP[type(obj)]
                 value = self.config.value(el_name)
                 signal_func(obj).emit(value)
+                # connect to config
                 signal_func(obj).connect(partial(self.config.setValue, f'{tab.name}/{el_name}'))
 
             self.config.endGroup()

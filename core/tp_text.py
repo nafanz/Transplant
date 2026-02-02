@@ -1,6 +1,7 @@
 tp_version = (2, 6, 1)
 # progress report
 requesting = "Requesting torrent info:"
+no_music = 'Not a music torrent'
 done = 'Done'
 fail = 'Fail'
 no_torfolder = 'Torrent has no folder'

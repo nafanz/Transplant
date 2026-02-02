@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from typing import Iterator, Any
 
+from core import tp_text
 from gazelle.tracker_data import TR, ReleaseType, ArtistType, Encoding
 
 FIELD_MAP = {
@@ -53,6 +54,8 @@ def unexape(thing: Any) -> Any:
 
 class TorrentInfo:
     def __init__(self, tr_resp: dict, src_tr: TR):
+        if tr_resp['group']['categoryId'] != 1:
+            raise ValueError(tp_text.no_music)
         self.grp_id: int | None = None
         self.img_url: str | None = None
         self.proxy_img: str | None = None

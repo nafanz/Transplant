@@ -148,14 +148,8 @@ class TorrentInfo:
         # strip disambiguation nr from artists
         self.strip_artists()
 
-        if tr_resp['torrent']['remastered']:
-            if not self.rem_year:
-                self.unknown = True
-        else:
-            # get rid of original release
-            self.rem_year = self.o_year
-            self.rem_label = tr_resp['group']['recordLabel']
-            self.rem_cat_nr = tr_resp['group']['catalogueNumber']
+        if not self.rem_year:
+            self.unknown = True
 
         if self.medium == 'BD':
             self.medium = 'Blu-Ray'

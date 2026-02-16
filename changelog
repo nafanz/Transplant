@@ -1,3 +1,9 @@
+2.6.2
+- New: You can now see which profiles are loaded
+- New: Merged uploads can be detected with certainty
+- New: 'records dk' label is uploaded as 'Self-released' on RED
+- Main branch is compatible with python < 3.11
+- Handle the extinction of original releases on OPS
 2.6.1
 - Fix: Loading profile did not set folder boxes correctly
 - Fix: rehosting OPS proxy images failes on ptpimg and imgbb

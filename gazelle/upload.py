@@ -116,7 +116,7 @@ class UploadData:
             if self.unknown:
                 upl_data['remaster_year'] = '1990'
                 upl_data['remaster_title'] = 'Unknown release year'
-            if 'records dk' in self.rem_label.lower():
+            if self.rem_label and 'records dk' in self.rem_label.lower():
                 upl_data['remaster_record_label'] = 'Self-released'
 
         elif dest is TR.OPS:
